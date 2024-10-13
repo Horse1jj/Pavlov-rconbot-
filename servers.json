@@ -1,0 +1,14 @@
+{
+    "Server1": {
+        "ip": "123.456.789.10",
+        "port": "12345",
+        "password": "rconPassword1"
+    },
+    "Server2": {
+        "ip": "987.654.321.10",
+        "port": "54321",
+        "password": "rconPassword2"
+    }
+}
+// add as many servers as you want and change the 
+server name 
