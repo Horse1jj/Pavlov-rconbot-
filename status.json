@@ -1,0 +1,5 @@
+{
+    "activityType": "WATCHING",   // Valid values: PLAYING, WATCHING, LISTENING, STREAMING
+    "activityMessage": "over the server",
+    "status": "online"  // Valid values: online, idle, dnd, invisible
+}
