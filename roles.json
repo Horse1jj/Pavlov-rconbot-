@@ -1,4 +1,4 @@
 {
-    "adminBot": ["Admin", "SuperAdmin"],
-    "modBot": ["Moderator", "Helper"]
+    "adminBot": ["123456789012345678", "876543210987654321"],
+    "modBot": ["112233445566778899", "998877665544332211"]
 }
