@@ -12,3 +12,9 @@ activity on your bot
 
 
 # pushinh embedded over hall 6:26 pm est 
+
+# 6:52 est all updates pushed 
+
+* added embedded repsonse
+* fixed "flush" 
+* made the servers.json much better 
