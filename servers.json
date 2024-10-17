@@ -1,14 +1,15 @@
 {
-    "Server1": {
+    "server1": {
+        "name": "Pavlov Server 1",
         "ip": "123.456.789.10",
-        "port": "12345",
-        "password": "rconPassword1"
+        "port": 9000,
+        "password": "yourpassword"
     },
-    "Server2": {
-        "ip": "987.654.321.10",
-        "port": "54321",
-        "password": "rconPassword2"
+    "server2": {
+        "name": "Pavlov Server 2",
+        "ip": "123.456.789.11",
+        "port": 9001,
+        "password": "yourpassword"
     }
 }
-// add as many servers as you want and change the 
-server name 
+
