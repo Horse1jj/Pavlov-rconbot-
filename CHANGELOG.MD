@@ -43,3 +43,8 @@ TTT Commands:
 
 added gag and ungag commands
 
+# fixed tp
+
+* fixed tp command 
+* added !players unsure if it works still testing
+
