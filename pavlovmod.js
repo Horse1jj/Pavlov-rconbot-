@@ -67,6 +67,26 @@ module.exports = {
                 message.channel.send({ embeds: [slapEmbed] });
                 break;
 
+            case 'gag':
+                rcon.sendCommand(server, `Gag ${args[0]}`);
+                const gagEmbed = new Discord.MessageEmbed()
+                    .setColor('#00FF00')
+                    .setTitle('Gag Successful')
+                    .setDescription(`${args[0]} has been gagged (muted) on ${serverName}.`)
+                    .setTimestamp();
+                message.channel.send({ embeds: [gagEmbed] });
+                break;
+
+            case 'ungag':
+                rcon.sendCommand(server, `Ungag ${args[0]}`);
+                const ungagEmbed = new Discord.MessageEmbed()
+                    .setColor('#00FF00')
+                    .setTitle('Ungag Successful')
+                    .setDescription(`${args[0]} has been ungagged (unmuted) on ${serverName}.`)
+                    .setTimestamp();
+                message.channel.send({ embeds: [ungagEmbed] });
+                break;
+
             case 'unban':
                 rcon.sendCommand(server, `Unban ${args[0]}`);
                 const unbanEmbed = new Discord.MessageEmbed()
