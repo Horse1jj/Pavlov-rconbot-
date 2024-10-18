@@ -38,3 +38,8 @@ TTT Commands:
 !tttsetkarma <player> <karma> <server>: Set a player's karma.
 
 !tttsetrole <player> <role> <server>: Set a player's role in TTT.
+
+# gag and ungag
+
+added gag and ungag commands
+
