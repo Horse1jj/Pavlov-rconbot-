@@ -173,15 +173,37 @@ client.on('messageCreate', async (message) => {
       break;
 
     case 'teleport':
-      await rcon.connect();
-      await rcon.send(`Teleport ${args[0]} ${args[1]} ${args[2]} ${args[3]}`);
-      await rcon.disconnect();
-      const teleportEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Teleport Successful')
-        .setDescription(`${args[0]} has been teleported to coordinates (${args[1]}, ${args[2]}, ${args[3]}) on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [teleportEmbed] });
+      const targetPlayer = args[0]; // Player to teleport
+      const destinationPlayer = args[2]; // Player whose location will be used
+
+      try {
+        await rcon.connect();
+
+        // Get the position of the destination player
+        const positionData = await rcon.send(`GetPosition ${destinationPlayer}`);
+        const [x, y, z] = positionData.split(' ').map(coord => parseFloat(coord));
+
+        // Teleport the target player to the destination player’s coordinates
+        await rcon.send(`Teleport ${targetPlayer} ${x} ${y} ${z}`);
+
+        await rcon.disconnect();
+
+        const teleportEmbed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('Teleport Successful')
+          .setDescription(`${targetPlayer} has been teleported to ${destinationPlayer}'s location on ${serverName}.`)
+          .setTimestamp();
+        message.channel.send({ embeds: [teleportEmbed] });
+
+      } catch (error) {
+        console.error('Error teleporting player:', error);
+        const errorEmbed = new EmbedBuilder()
+          .setColor('#FF0000')
+          .setTitle('Teleport Failed')
+          .setDescription('There was an error teleporting the player.')
+          .setTimestamp();
+        message.channel.send({ embeds: [errorEmbed] });
+      }
       break;
 
     case 'unban':
@@ -227,19 +249,21 @@ client.on('messageCreate', async (message) => {
       const tttFlushKarmaEmbed = new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('TTT Karma Flushed')
-        .setDescription(`Karma has been flushed on ${serverName}.`)
+        .setDescription(`TTT Karma has been flushed on ${serverName}.`)
         .setTimestamp();
       message.channel.send({ embeds: [tttFlushKarmaEmbed] });
       break;
 
     case 'tttgivecredits':
+      const tttUser = args[0];
+      const tttCredits = args[1];
       await rcon.connect();
-      await rcon.send(`TTTGiveCredits ${args[0]} ${args[1]}`);
+      await rcon.send(`TTTGiveCredits ${tttUser} ${tttCredits}`);
       await rcon.disconnect();
       const tttGiveCreditsEmbed = new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('TTT Credits Given')
-        .setDescription(`${args[0]} has been given ${args[1]} credits on ${serverName}.`)
+        .setDescription(`${tttUser} has been given ${tttCredits} credits on ${serverName}.`)
         .setTimestamp();
       message.channel.send({ embeds: [tttGiveCreditsEmbed] });
       break;
@@ -257,30 +281,34 @@ client.on('messageCreate', async (message) => {
       break;
 
     case 'tttsetkarma':
+      const tttKarmaUser = args[0];
+      const tttKarmaValue = args[1];
       await rcon.connect();
-      await rcon.send(`TTTSetKarma ${args[0]} ${args[1]}`);
+      await rcon.send(`TTTSetKarma ${tttKarmaUser} ${tttKarmaValue}`);
       await rcon.disconnect();
       const tttSetKarmaEmbed = new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('TTT Karma Set')
-        .setDescription(`${args[0]} now has ${args[1]} karma on ${serverName}.`)
+        .setDescription(`${tttKarmaUser} now has ${tttKarmaValue} karma on ${serverName}.`)
         .setTimestamp();
       message.channel.send({ embeds: [tttSetKarmaEmbed] });
       break;
 
     case 'tttsetrole':
+      const tttRoleUser = args[0];
+      const tttRoleValue = args[1];
       await rcon.connect();
-      await rcon.send(`TTTSetRole ${args[0]} ${args[1]}`);
+      await rcon.send(`TTTSetRole ${tttRoleUser} ${tttRoleValue}`);
       await rcon.disconnect();
       const tttSetRoleEmbed = new EmbedBuilder()
         .setColor('#00FF00')
         .setTitle('TTT Role Set')
-        .setDescription(`${args[0]} now has the role ${args[1]} on ${serverName}.`)
+        .setDescription(`${tttRoleUser} now has the role ${tttRoleValue} on ${serverName}.`)
         .setTimestamp();
       message.channel.send({ embeds: [tttSetRoleEmbed] });
       break;
 
-    // Add more commands as needed.
+    // Add more commands / modify as you please
   }
 });
 
