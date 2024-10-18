@@ -1,16 +1,10 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const PavlovRcon = require('pavlov-rcon');
+const aliases = require('./aliases');  
+const config = require('./config');
+const { randomElement, checkModPermission, execServerCommand } = require('./utils');  
 
-// Discord bot setup
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
-});
-
-// RCON setup for each server (add your server details in `servers.json`)
+// RCON setup for each server
 const servers = require('./servers.json');
 const rconConnections = {};
 
@@ -23,294 +17,171 @@ for (let serverName in servers) {
   });
 }
 
-// Once the bot is ready
-client.once('ready', () => {
-  console.log('Bot is online!');
-});
+// Mod commands
+module.exports = {
+  name: 'Pavlovmod',
+  description: 'Pavlov Mod Commands',
 
-// Handle messages
-client.on('messageCreate', async (message) => {
-  // Ignore bot messages
-  if (message.author.bot) return;
+  async execute(message, args) {
+    const command = args.shift().toLowerCase();
+    const serverName = args[0] || config.default_server;
+    const rcon = rconConnections[serverName];
 
-  const args = message.content.slice(1).trim().split(/ +/);
-  const command = args.shift().toLowerCase();
-  const serverName = args[args.length - 1]; // Last argument is the server name
-  const server = servers[serverName];
+    // Check for mod permission for all commands
+    const hasPermission = await checkModPermission(message, serverName);
+    if (!hasPermission) {
+      const noPermEmbed = new EmbedBuilder()
+        .setTitle('Permission Denied')
+        .setDescription('You do not have permission to use this command.')
+        .setColor('#FF0000');
+      return message.channel.send({ embeds: [noPermEmbed] });
+    }
 
-  // Handle RCON commands
-  if (!server && command !== 'players') {
-    const serverNotFoundEmbed = new EmbedBuilder()
-      .setColor('#FF0000')
-      .setTitle('Server Not Found')
-      .setDescription(`Server "${serverName}" not found!`)
-      .setTimestamp();
-    return message.channel.send({ embeds: [serverNotFoundEmbed] });
+    try {
+      // Connect to the RCON server
+      await rcon.connect();
+
+      switch (command) {
+        case 'flush':
+          await flushCommand(message, serverName, rcon);
+          break;
+
+        case 'ban':
+          await execCommand(message, serverName, rcon, `Ban ${args[1]}`);
+          break;
+
+        case 'kick':
+          await execCommand(message, serverName, rcon, `Kick ${args[1]}`);
+          break;
+
+        case 'kill':
+          await execCommand(message, serverName, rcon, `Kill ${args[1]}`);
+          break;
+
+        case 'slap':
+          await execCommand(message, serverName, rcon, `Slap ${args[1]}`);
+          break;
+
+        case 'unban':
+          await execCommand(message, serverName, rcon, `Unban ${args[1]}`);
+          break;
+
+        case 'switchteam':
+          await execCommand(message, serverName, rcon, `SwitchTeam ${args[1]}`);
+          break;
+
+        case 'teleport':
+          if (args.length === 2) {
+            await execCommand(message, serverName, rcon, `Teleport ${args[0]} ${args[1]}`);
+          } else {
+            message.channel.send('Invalid syntax. Use: !teleport (player name) to (player name)');
+          }
+          break;
+
+        case 'tttalwaysenableskinmenu':
+          await execCommand(message, serverName, rcon, `TTTAlwaysEnableSkinMenu`);
+          break;
+
+        case 'tttendround':
+          await execCommand(message, serverName, rcon, `TTTEndRound`);
+          break;
+
+        case 'tttflushkarma':
+          await execCommand(message, serverName, rcon, `TTTFlushKarma`);
+          break;
+
+        case 'tttgivecredits':
+          await execCommand(message, serverName, rcon, `TTTGiveCredits ${args[1]} ${args[2]}`);
+          break;
+
+        case 'tttpausetimer':
+          await execCommand(message, serverName, rcon, `TTTPauseTimer`);
+          break;
+
+        case 'tttsetkarma':
+          await execCommand(message, serverName, rcon, `TTTSetKarma ${args[1]} ${args[2]}`);
+          break;
+
+        case 'tttsetrole':
+          await execCommand(message, serverName, rcon, `TTTSetRole ${args[1]} ${args[2]}`);
+          break;
+
+        case 'gag':
+          await execCommand(message, serverName, rcon, `Gag ${args[1]}`);
+          break;
+
+        case 'ungag':
+          await execCommand(message, serverName, rcon, `Ungag ${args[1]}`);
+          break;
+
+        default:
+          message.channel.send('Unknown command.');
+          break;
+      }
+
+      // Disconnect after each command execution
+      await rcon.disconnect();
+
+    } catch (error) {
+      console.error(`Error executing ${command}:`, error);
+      const errorEmbed = new EmbedBuilder()
+        .setTitle(`Error Executing ${command}`)
+        .setDescription('There was an error executing the command.')
+        .setColor('#FF0000');
+      await message.channel.send({ embeds: [errorEmbed] });
+    }
+  }
+};
+
+// Helper function for general commands
+async function execCommand(message, serverName, rcon, command) {
+  const data = await rcon.send(command);
+  const embed = new EmbedBuilder()
+    .setTitle(`Executed \`${command}\``)
+    .setDescription(`${data}`)
+    .setColor('#00FF00');
+  await message.channel.send({ embeds: [embed] });
+}
+
+// Flush command with special logic
+async function flushCommand(message, serverName, rcon) {
+  const data = await execServerCommand(serverName, 'RefreshList');
+  const playerList = data.PlayerList;
+
+  const nonAliasPlayerIds = [];
+  playerList.forEach(player => {
+    const isAlias = aliases.findPlayerAlias(player.UniqueId);
+    if (!isAlias) {
+      nonAliasPlayerIds.push(player.UniqueId);
+    }
+  });
+
+  if (nonAliasPlayerIds.length === 0) {
+    const embed = new EmbedBuilder()
+      .setTitle(`No players to flush on \`${serverName}\``)
+      .setColor('#00FF00');
+    await message.channel.send({ embeds: [embed] });
+    return;
   }
 
-  const rcon = rconConnections[serverName];
+  const toKickId = randomElement(nonAliasPlayerIds);
+  const kickData = await execServerCommand(serverName, `Kick ${toKickId}`);
+  const kickSuccess = kickData.Kick;
 
-  switch (command) {
-    // Anyone can use the !players command
-    case 'players':
-      try {
-        const serverForPlayers = servers[args[0]] || Object.keys(servers)[0];
-        const rconForPlayers = rconConnections[serverForPlayers];
-        
-        await rconForPlayers.connect();
-        const playerData = await rconForPlayers.send('RefreshList');
-        const players = playerData.split('\n').filter(player => player.trim() !== '');
-
-        const embed = new EmbedBuilder()
-          .setTitle(`Current Players in Pavlov (${serverForPlayers})`)
-          .setColor(0x0099ff)
-          .setDescription(players.length > 0 ? players.join('\n') : 'No players are currently connected.');
-        
-        await message.channel.send({ embeds: [embed] });
-        await rconForPlayers.disconnect();
-        
-      } catch (error) {
-        console.error('Error fetching players:', error);
-        message.channel.send('There was an error fetching the player list.');
-      }
-      break;
-
-    // Moderator/Admin Commands
-    case 'ban':
-      await rcon.connect();
-      await rcon.send(`Ban ${args[0]}`);
-      await rcon.disconnect();
-      const banEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Ban Successful')
-        .setDescription(`${args[0]} has been banned from ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [banEmbed] });
-      break;
-
-    case 'kick':
-      await rcon.connect();
-      await rcon.send(`Kick ${args[0]}`);
-      await rcon.disconnect();
-      const kickEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Kick Successful')
-        .setDescription(`${args[0]} has been kicked from ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [kickEmbed] });
-      break;
-
-    case 'gag':
-      await rcon.connect();
-      await rcon.send(`Gag ${args[0]}`);
-      await rcon.disconnect();
-      const gagEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Gag Successful')
-        .setDescription(`${args[0]} has been gagged (muted) on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [gagEmbed] });
-      break;
-
-    case 'ungag':
-      await rcon.connect();
-      await rcon.send(`Ungag ${args[0]}`);
-      await rcon.disconnect();
-      const ungagEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Ungag Successful')
-        .setDescription(`${args[0]} has been ungagged (unmuted) on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [ungagEmbed] });
-      break;
-
-    case 'flush':
-      await rcon.connect();
-      await rcon.send('Flush');
-      await rcon.disconnect();
-      const flushEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Flush Successful')
-        .setDescription(`Server ${serverName} has been flushed.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [flushEmbed] });
-      break;
-
-    case 'kill':
-      await rcon.connect();
-      await rcon.send(`Kill ${args[0]}`);
-      await rcon.disconnect();
-      const killEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Kill Successful')
-        .setDescription(`${args[0]} has been killed in ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [killEmbed] });
-      break;
-
-    case 'slap':
-      await rcon.connect();
-      await rcon.send(`Slap ${args[0]}`);
-      await rcon.disconnect();
-      const slapEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Slap Successful')
-        .setDescription(`${args[0]} has been slapped in ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [slapEmbed] });
-      break;
-
-    case 'switchteam':
-      await rcon.connect();
-      await rcon.send(`SwitchTeam ${args[0]}`);
-      await rcon.disconnect();
-      const switchTeamEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Switch Team Successful')
-        .setDescription(`${args[0]} has been switched to the opposite team on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [switchTeamEmbed] });
-      break;
-
-    case 'teleport':
-      const targetPlayer = args[0]; // Player to teleport
-      const destinationPlayer = args[2]; // Player whose location will be used
-
-      try {
-        await rcon.connect();
-
-        // Get the position of the destination player
-        const positionData = await rcon.send(`GetPosition ${destinationPlayer}`);
-        const [x, y, z] = positionData.split(' ').map(coord => parseFloat(coord));
-
-        // Teleport the target player to the destination player’s coordinates
-        await rcon.send(`Teleport ${targetPlayer} ${x} ${y} ${z}`);
-
-        await rcon.disconnect();
-
-        const teleportEmbed = new EmbedBuilder()
-          .setColor('#00FF00')
-          .setTitle('Teleport Successful')
-          .setDescription(`${targetPlayer} has been teleported to ${destinationPlayer}'s location on ${serverName}.`)
-          .setTimestamp();
-        message.channel.send({ embeds: [teleportEmbed] });
-
-      } catch (error) {
-        console.error('Error teleporting player:', error);
-        const errorEmbed = new EmbedBuilder()
-          .setColor('#FF0000')
-          .setTitle('Teleport Failed')
-          .setDescription('There was an error teleporting the player.')
-          .setTimestamp();
-        message.channel.send({ embeds: [errorEmbed] });
-      }
-      break;
-
-    case 'unban':
-      await rcon.connect();
-      await rcon.send(`Unban ${args[0]}`);
-      await rcon.disconnect();
-      const unbanEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('Unban Successful')
-        .setDescription(`${args[0]} has been unbanned from ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [unbanEmbed] });
-      break;
-
-    case 'tttalwaysenableskinmenu':
-      await rcon.connect();
-      await rcon.send('TTTAlwaysEnableSkinMenu');
-      await rcon.disconnect();
-      const tttSkinMenuEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Skin Menu Enabled')
-        .setDescription(`TTT Skin Menu has been always enabled on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttSkinMenuEmbed] });
-      break;
-
-    case 'tttendround':
-      await rcon.connect();
-      await rcon.send('TTTEndRound');
-      await rcon.disconnect();
-      const tttEndRoundEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Round Ended')
-        .setDescription(`The current TTT round has been ended on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttEndRoundEmbed] });
-      break;
-
-    case 'tttflushkarma':
-      await rcon.connect();
-      await rcon.send('TTTFlushKarma');
-      await rcon.disconnect();
-      const tttFlushKarmaEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Karma Flushed')
-        .setDescription(`TTT Karma has been flushed on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttFlushKarmaEmbed] });
-      break;
-
-    case 'tttgivecredits':
-      const tttUser = args[0];
-      const tttCredits = args[1];
-      await rcon.connect();
-      await rcon.send(`TTTGiveCredits ${tttUser} ${tttCredits}`);
-      await rcon.disconnect();
-      const tttGiveCreditsEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Credits Given')
-        .setDescription(`${tttUser} has been given ${tttCredits} credits on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttGiveCreditsEmbed] });
-      break;
-
-    case 'tttpausetimer':
-      await rcon.connect();
-      await rcon.send('TTTPauseTimer');
-      await rcon.disconnect();
-      const tttPauseTimerEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Timer Paused')
-        .setDescription(`The TTT round timer has been paused on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttPauseTimerEmbed] });
-      break;
-
-    case 'tttsetkarma':
-      const tttKarmaUser = args[0];
-      const tttKarmaValue = args[1];
-      await rcon.connect();
-      await rcon.send(`TTTSetKarma ${tttKarmaUser} ${tttKarmaValue}`);
-      await rcon.disconnect();
-      const tttSetKarmaEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Karma Set')
-        .setDescription(`${tttKarmaUser} now has ${tttKarmaValue} karma on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttSetKarmaEmbed] });
-      break;
-
-    case 'tttsetrole':
-      const tttRoleUser = args[0];
-      const tttRoleValue = args[1];
-      await rcon.connect();
-      await rcon.send(`TTTSetRole ${tttRoleUser} ${tttRoleValue}`);
-      await rcon.disconnect();
-      const tttSetRoleEmbed = new EmbedBuilder()
-        .setColor('#00FF00')
-        .setTitle('TTT Role Set')
-        .setDescription(`${tttRoleUser} now has the role ${tttRoleValue} on ${serverName}.`)
-        .setTimestamp();
-      message.channel.send({ embeds: [tttSetRoleEmbed] });
-      break;
-
-    // Add more commands / modify as you please
+  let embed;
+  if (!kickSuccess) {
+    embed = new EmbedBuilder()
+      .setTitle(`Error while flushing on \`${serverName}\``)
+      .setColor('#FF0000');
+  } else {
+    embed = new EmbedBuilder()
+      .setTitle(`Successfully flushed player on \`${serverName}\``)
+      .setColor('#00FF00');
   }
-});
 
-// Log in the bot with your Discord token
-client.login('YOUR_DISCORD_BOT_TOKEN');
+  await message.channel.send({ embeds: [embed] });
+}
+
+function randomElement(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
