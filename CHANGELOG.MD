@@ -48,3 +48,8 @@ added gag and ungag commands
 * fixed tp command 
 * added !players unsure if it works still testing
 
+# flush workig
+
+* flush works thanks to @callmerinchan a fellow 
+pavlov modder
+
