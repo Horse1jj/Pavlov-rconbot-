@@ -9,7 +9,9 @@ A Java script discord rcon bot
 
 * visual studio code 
 
-* pavlov-rcon 
+* pavlov-rcon
+
+* discord.js 
 
 # how to install pavlov-rcon
 
