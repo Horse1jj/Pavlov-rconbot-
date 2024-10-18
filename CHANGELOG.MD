@@ -18,3 +18,23 @@ activity on your bot
 * added embedded repsonse
 * fixed "flush" 
 * made the servers.json much better 
+
+# ttt command over haue 
+
+Switch Team: Use !switchteam <player> <server> to switch a player to the opposite team.
+
+Teleport: Use !teleport <player> <x> <y> <z> <server> to teleport a player to specific coordinates.
+
+TTT Commands:
+!tttalwaysenableskinmenu <server>: Always enable the skin menu in TTT.
+
+!tttendround <server>: End the current TTT round.
+!tttflushkarma <server>: Flush karma for all players.
+
+!tttgivecredits <player> <amount> <server>: Give credits to a player.
+
+!tttpausetimer <server>: Pause the TTT round timer.
+
+!tttsetkarma <player> <karma> <server>: Set a player's karma.
+
+!tttsetrole <player> <role> <server>: Set a player's role in TTT.
