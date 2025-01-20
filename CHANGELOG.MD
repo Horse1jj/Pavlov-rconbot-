@@ -53,3 +53,6 @@ added gag and ungag commands
 * flush works thanks to @callmerinchan a fellow 
 pavlov modder
 
+# fixed a known snd command issue 
+
+
