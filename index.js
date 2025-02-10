@@ -1,7 +1,7 @@
 const Discord = require('discord.js');
 const client = new Discord.Client({ intents: ['GUILDS', 'GUILD_MESSAGES', 'GUILD_MEMBERS'] });
-const modCommands = require('./Pavlovmod');
-const adminCommands = require('./Pavlovadmin');
+const modCommands = require('./pavlovmod');
+const adminCommands = require('./pavlovadmin');
 const servers = require('./servers.json');
 const roles = require('./roles.json');
 const statusConfig = require('./status.json');
